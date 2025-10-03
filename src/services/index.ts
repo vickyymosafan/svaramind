@@ -3,3 +3,6 @@ export * from './moodService';
 
 // Export YouTube API service
 export * from './youtubeService';
+
+// Export API client functions
+export * from './apiClient';
