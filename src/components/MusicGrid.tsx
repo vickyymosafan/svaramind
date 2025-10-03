@@ -7,33 +7,38 @@ export function MusicGrid({ videos, isLoading, error }: MusicGridProps) {
   // Loading state with skeleton components
   if (isLoading) {
     return (
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div 
+        className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8"
+        role="status" 
+        aria-label="Loading music recommendations"
+      >
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="animate-pulse">
+            <div key={index} className="animate-pulse" aria-hidden="true">
               <div className="bg-gray-200 rounded-lg shadow-md overflow-hidden">
                 {/* Skeleton thumbnail */}
-                <div className="w-full h-48 bg-gray-300"></div>
+                <div className="w-full h-36 sm:h-40 md:h-44 lg:h-48 bg-gray-300"></div>
                 
                 {/* Skeleton content */}
-                <div className="p-4 space-y-3">
+                <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
                   {/* Skeleton title */}
-                  <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                  <div className="h-3 sm:h-4 bg-gray-300 rounded w-3/4"></div>
+                  <div className="h-3 sm:h-4 bg-gray-300 rounded w-1/2"></div>
                   
                   {/* Skeleton channel */}
-                  <div className="h-3 bg-gray-300 rounded w-2/3"></div>
+                  <div className="h-2 sm:h-3 bg-gray-300 rounded w-2/3"></div>
                   
                   {/* Skeleton metadata */}
                   <div className="flex justify-between">
-                    <div className="h-3 bg-gray-300 rounded w-1/4"></div>
-                    <div className="h-3 bg-gray-300 rounded w-1/4"></div>
+                    <div className="h-2 sm:h-3 bg-gray-300 rounded w-1/4"></div>
+                    <div className="h-2 sm:h-3 bg-gray-300 rounded w-1/4"></div>
                   </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
+        <span className="sr-only">Loading music recommendations...</span>
       </div>
     );
   }
@@ -41,11 +46,11 @@ export function MusicGrid({ videos, isLoading, error }: MusicGridProps) {
   // Error state
   if (error) {
     return (
-      <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <div className="flex justify-center mb-4">
+      <div className="w-full max-w-2xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 text-center">
+          <div className="flex justify-center mb-3 sm:mb-4">
             <svg 
-              className="h-12 w-12 text-red-400" 
+              className="h-10 w-10 sm:h-12 sm:w-12 text-red-400" 
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="currentColor"
@@ -58,15 +63,15 @@ export function MusicGrid({ videos, isLoading, error }: MusicGridProps) {
               />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-red-800 mb-2">
+          <h3 className="text-base sm:text-lg font-medium text-red-800 mb-2">
             Oops! Terjadi kesalahan
           </h3>
-          <p className="text-red-600 mb-4">
+          <p className="text-sm sm:text-base text-red-600 mb-4">
             {error}
           </p>
           <button 
             onClick={() => window.location.reload()} 
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors touch-manipulation"
           >
             Coba Lagi
           </button>
@@ -78,11 +83,11 @@ export function MusicGrid({ videos, isLoading, error }: MusicGridProps) {
   // Empty state
   if (!videos || videos.length === 0) {
     return (
-      <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <div className="flex justify-center mb-4">
+      <div className="w-full max-w-2xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 sm:p-8 text-center">
+          <div className="flex justify-center mb-3 sm:mb-4">
             <svg 
-              className="h-12 w-12 text-gray-400" 
+              className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400" 
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="currentColor"
@@ -95,13 +100,13 @@ export function MusicGrid({ videos, isLoading, error }: MusicGridProps) {
               />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
             Tidak ada lagu ditemukan
           </h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-sm sm:text-base text-gray-600 mb-4">
             Coba ubah deskripsi mood kamu atau gunakan kata-kata yang berbeda.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-xs sm:text-sm text-gray-500">
             Contoh: "Aku lagi bahagia" atau "Sedang galau nih"
           </p>
         </div>
@@ -111,21 +116,33 @@ export function MusicGrid({ videos, isLoading, error }: MusicGridProps) {
 
   // Success state - display music grid
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
       {/* Results header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="mb-4 sm:mb-6">
+        <h2 
+          id="music-results-heading"
+          className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2"
+        >
           Lagu untuk mood kamu
         </h2>
-        <p className="text-gray-600">
+        <p 
+          className="text-sm sm:text-base text-gray-600"
+          aria-describedby="music-results-heading"
+        >
           Ditemukan {videos.length} lagu yang cocok dengan perasaan kamu
         </p>
       </div>
 
       {/* Responsive music grid */}
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {videos.map((video) => (
-          <MusicCard key={video.id} video={video} />
+      <div 
+        className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+        role="grid"
+        aria-labelledby="music-results-heading"
+      >
+        {videos.map((video, index) => (
+          <div key={video.id} role="gridcell" aria-rowindex={Math.floor(index / 4) + 1} aria-colindex={(index % 4) + 1}>
+            <MusicCard video={video} />
+          </div>
         ))}
       </div>
     </div>
