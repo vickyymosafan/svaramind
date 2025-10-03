@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import { HeroSection, MusicGrid } from '@/components';
 import { useMusicDiscovery } from '@/hooks';
+import { initializePerformanceMonitoring } from '@/utils/performance';
 
 export default function Home() {
   const {
@@ -16,6 +18,11 @@ export default function Home() {
     canRetry,
     stats
   } = useMusicDiscovery();
+
+  // Initialize performance monitoring
+  useEffect(() => {
+    initializePerformanceMonitoring();
+  }, []);
 
   const handleMoodSubmit = async (mood: string) => {
     // Clear any previous errors

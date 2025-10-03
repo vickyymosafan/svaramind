@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { EnvironmentValidator } from "@/components/EnvironmentValidator";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,7 +19,12 @@ export const metadata: Metadata = {
   description: "Aplikasi untuk menemukan lagu viral dan populer berdasarkan mood kamu. Analisis sentimen otomatis untuk rekomendasi musik yang tepat.",
   keywords: ["music", "mood", "lagu", "viral", "sentiment analysis", "YouTube", "musik"],
   authors: [{ name: "Mood Music App" }],
-  viewport: "width=device-width, initial-scale=1",
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
@@ -28,13 +35,16 @@ export default function RootLayout({
   return (
     <html lang="id" className="scroll-smooth">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
         <meta name="theme-color" content="#ffffff" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-gray-50`}
       >
-        {children}
+        <ErrorBoundary>
+          <EnvironmentValidator>
+            {children}
+          </EnvironmentValidator>
+        </ErrorBoundary>
       </body>
     </html>
   );

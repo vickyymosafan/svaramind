@@ -1,16 +1,28 @@
-import { YOUTUBE_API_CONFIG, getRegionCode } from '../config/youtube';
+import { YOUTUBE_API_CONFIG, getRegionCode, getYouTubeConfig } from '../config/youtube';
+import { getAPIEnvironmentConfig } from '../config/environment';
 import { YouTubeAPIResponse, YouTubeVideo } from '../types';
 
 /**
  * YouTube API Service for fetching popular music videos
  */
 export class YouTubeService {
-  private readonly apiKey: string;
   private readonly baseURL: string;
 
   constructor() {
-    this.apiKey = YOUTUBE_API_CONFIG.apiKey;
     this.baseURL = YOUTUBE_API_CONFIG.baseURL;
+  }
+
+  /**
+   * Get current API configuration with validated environment
+   * @private
+   */
+  private getConfig() {
+    try {
+      return getYouTubeConfig();
+    } catch (error) {
+      console.error('Failed to get YouTube configuration:', error);
+      throw new Error('YouTube API configuration error. Please check server configuration.');
+    }
   }
 
   /**
@@ -24,7 +36,9 @@ export class YouTubeService {
     searchQuery?: string
   ): Promise<YouTubeAPIResponse> {
     try {
-      const url = this.buildAPIUrl(regionCode, searchQuery);
+      // Validate configuration before making API call
+      const config = this.getConfig();
+      const url = this.buildAPIUrl(regionCode, searchQuery, config);
       
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -68,18 +82,19 @@ export class YouTubeService {
    * Build the YouTube API URL with appropriate parameters
    * @private
    */
-  private buildAPIUrl(regionCode: string, searchQuery?: string): URL {
+  private buildAPIUrl(regionCode: string, searchQuery?: string, config?: any): URL {
+    const apiConfig = config || this.getConfig();
     const endpoint = searchQuery 
-      ? YOUTUBE_API_CONFIG.endpoints.search 
-      : YOUTUBE_API_CONFIG.endpoints.videos;
+      ? apiConfig.endpoints.search 
+      : apiConfig.endpoints.videos;
     
     const url = new URL(`${this.baseURL}${endpoint}`);
     
     // Base parameters - create a mutable copy
     const params: Record<string, string | number> = {
-      ...YOUTUBE_API_CONFIG.defaultParams,
+      ...apiConfig.defaultParams,
       regionCode,
-      key: this.apiKey
+      key: apiConfig.apiKey
     };
 
     // If we have a search query, modify parameters for search endpoint
@@ -136,17 +151,24 @@ export class YouTubeService {
    * @returns boolean indicating if configuration is valid
    */
   validateConfiguration(): boolean {
-    if (!this.apiKey || this.apiKey === '') {
-      console.error('YouTube API key is missing or empty');
+    try {
+      const config = this.getConfig();
+      
+      if (!config.apiKey || config.apiKey === '') {
+        console.error('YouTube API key is missing or empty');
+        return false;
+      }
+      
+      if (!this.baseURL || this.baseURL === '') {
+        console.error('YouTube API base URL is missing or empty');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Configuration validation failed:', error);
       return false;
     }
-    
-    if (!this.baseURL || this.baseURL === '') {
-      console.error('YouTube API base URL is missing or empty');
-      return false;
-    }
-    
-    return true;
   }
 }
 

@@ -12,6 +12,7 @@ import {
   createErrorNextResponse
 } from '@/utils/errorHandler';
 import { logger, createRequestId, measureTimeAsync } from '@/utils/logger';
+import '@/lib/startup'; // Initialize environment validation on server startup
 
 /**
  * POST /api/music

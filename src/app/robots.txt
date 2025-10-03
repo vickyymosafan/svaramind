@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: /sitemap.xml
+
+# Disallow API routes from crawling
+Disallow: /api/
+
+# Allow main pages
+Allow: /

@@ -1,5 +1,10 @@
-// YouTube API Configuration
-export const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || 'AIzaSyB-6C-9pKRZja0W4wZhRInwtEZ71sLIQSw';
+import { getAPIEnvironmentConfig } from './environment';
+
+// Get validated environment configuration
+const envConfig = getAPIEnvironmentConfig();
+
+// YouTube API Configuration with validated environment
+export const YOUTUBE_API_KEY = envConfig.youtubeApiKey;
 
 export const YOUTUBE_API_CONFIG = {
   baseURL: 'https://www.googleapis.com/youtube/v3',
@@ -28,15 +33,19 @@ export function getRegionCode(language: string): string {
   return regionMap[language] || regionMap.default;
 }
 
-// Environment validation
-const requiredEnvVars = {
-  YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
-};
-
-export function validateEnvironment(): void {
-  for (const [key, value] of Object.entries(requiredEnvVars)) {
-    if (!value) {
-      console.warn(`Missing environment variable: ${key}, using fallback value`);
+/**
+ * Get YouTube API configuration with runtime validation
+ * This ensures the API key is always validated when accessed
+ */
+export function getYouTubeConfig() {
+  const config = getAPIEnvironmentConfig();
+  
+  return {
+    ...YOUTUBE_API_CONFIG,
+    apiKey: config.youtubeApiKey,
+    defaultParams: {
+      ...YOUTUBE_API_CONFIG.defaultParams,
+      key: config.youtubeApiKey
     }
-  }
+  };
 }
