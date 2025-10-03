@@ -53,7 +53,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       id: typeof item.id === 'string' ? item.id : item.id?.videoId || '',
       title: item.snippet.title,
       channelTitle: item.snippet.channelTitle,
-      thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+      thumbnail: item.snippet.thumbnails.medium?.url || 
+                item.snippet.thumbnails.default?.url || 
+                item.snippet.thumbnails.high?.url || 
+                'https://via.placeholder.com/320x180?text=No+Thumbnail',
       publishedAt: item.snippet.publishedAt,
       viewCount: item.statistics?.viewCount || '0',
       likeCount: item.statistics?.likeCount || '0'
