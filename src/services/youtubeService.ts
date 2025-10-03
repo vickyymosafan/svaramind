@@ -91,19 +91,28 @@ export class YouTubeService {
     const url = new URL(`${this.baseURL}${endpoint}`);
     
     // Base parameters - create a mutable copy
-    const params: Record<string, string | number> = {
-      ...apiConfig.defaultParams,
-      regionCode,
-      key: apiConfig.apiKey
-    };
+    let params: Record<string, string | number>;
 
-    // If we have a search query, modify parameters for search endpoint
     if (searchQuery) {
-      params.q = searchQuery;
-      params.type = 'video';
-      params.order = 'relevance';
-      // Remove chart parameter for search endpoint
-      delete params.chart;
+      // Parameters for search endpoint (different from videos endpoint)
+      params = {
+        part: 'snippet', // Search endpoint only supports snippet
+        q: searchQuery,
+        type: 'video',
+        videoCategoryId: '10', // Music category
+        maxResults: apiConfig.defaultParams.maxResults,
+        safeSearch: apiConfig.defaultParams.safeSearch,
+        order: 'relevance',
+        regionCode,
+        key: apiConfig.apiKey
+      };
+    } else {
+      // Parameters for videos endpoint
+      params = {
+        ...apiConfig.defaultParams,
+        regionCode,
+        key: apiConfig.apiKey
+      };
     }
 
     // Add all parameters to URL

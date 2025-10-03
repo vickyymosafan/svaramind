@@ -1,10 +1,21 @@
 import { getAPIEnvironmentConfig } from './environment';
 
-// Get validated environment configuration
-const envConfig = getAPIEnvironmentConfig();
+// Fallback API key as specified in requirements
+const FALLBACK_YOUTUBE_API_KEY = 'AIzaSyB-6C-9pKRZja0W4wZhRInwtEZ71sLIQSw';
 
-// YouTube API Configuration with validated environment
-export const YOUTUBE_API_KEY = envConfig.youtubeApiKey;
+// Get YouTube API key with fallback
+function getYouTubeAPIKey(): string {
+  try {
+    const envConfig = getAPIEnvironmentConfig();
+    return envConfig.youtubeApiKey;
+  } catch (error) {
+    console.warn('Failed to get environment config, using fallback API key:', error);
+    return FALLBACK_YOUTUBE_API_KEY;
+  }
+}
+
+// YouTube API Configuration
+export const YOUTUBE_API_KEY = getYouTubeAPIKey();
 
 export const YOUTUBE_API_CONFIG = {
   baseURL: 'https://www.googleapis.com/youtube/v3',
@@ -38,14 +49,14 @@ export function getRegionCode(language: string): string {
  * This ensures the API key is always validated when accessed
  */
 export function getYouTubeConfig() {
-  const config = getAPIEnvironmentConfig();
+  const apiKey = getYouTubeAPIKey();
   
   return {
     ...YOUTUBE_API_CONFIG,
-    apiKey: config.youtubeApiKey,
+    apiKey,
     defaultParams: {
       ...YOUTUBE_API_CONFIG.defaultParams,
-      key: config.youtubeApiKey
+      key: apiKey
     }
   };
 }

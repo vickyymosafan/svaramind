@@ -1,35 +1,106 @@
-import Sentiment from 'sentiment';
 import { SentimentResult, MoodClassification } from '@/types';
 import { MOOD_KEYWORDS, SENTIMENT_THRESHOLDS } from '@/config/constants';
 
-// Initialize sentiment analyzer
-const sentiment = new Sentiment();
+// Lazy-loaded sentiment analyzer to avoid server-side issues
+let sentimentAnalyzer: any = null;
 
 /**
- * Analyzes the sentiment of input text using the sentiment library
+ * Initialize sentiment analyzer with error handling
+ */
+async function initializeSentiment(): Promise<any> {
+  if (sentimentAnalyzer) {
+    return sentimentAnalyzer;
+  }
+
+  try {
+    // Dynamic import to avoid server-side issues
+    const Sentiment = await import('sentiment');
+    sentimentAnalyzer = new (Sentiment.default || Sentiment)();
+    return sentimentAnalyzer;
+  } catch (error) {
+    console.error('Failed to initialize sentiment library:', error);
+    return null;
+  }
+}
+
+/**
+ * Simple keyword-based sentiment analysis fallback
+ */
+function analyzeKeywordSentiment(text: string): SentimentResult {
+  const lowerText = text.toLowerCase();
+  
+  // Positive keywords
+  const positiveWords = [
+    'happy', 'joy', 'excited', 'great', 'awesome', 'amazing', 'wonderful', 'fantastic',
+    'love', 'good', 'excellent', 'perfect', 'brilliant', 'cheerful', 'delighted',
+    'energetic', 'upbeat', 'positive', 'optimistic', 'confident', 'motivated'
+  ];
+  
+  // Negative keywords
+  const negativeWords = [
+    'sad', 'angry', 'depressed', 'upset', 'frustrated', 'disappointed', 'terrible',
+    'awful', 'bad', 'horrible', 'hate', 'annoyed', 'stressed', 'worried', 'anxious',
+    'lonely', 'tired', 'exhausted', 'overwhelmed', 'down', 'melancholy'
+  ];
+  
+  let positiveScore = 0;
+  let negativeScore = 0;
+  const words = lowerText.split(/\s+/);
+  
+  words.forEach(word => {
+    if (positiveWords.includes(word)) positiveScore++;
+    if (negativeWords.includes(word)) negativeScore++;
+  });
+  
+  const score = positiveScore - negativeScore;
+  const comparative = score / words.length;
+  
+  return {
+    score,
+    comparative,
+    calculation: [],
+    tokens: words,
+    words: words,
+    positive: positiveWords.filter(word => lowerText.includes(word)),
+    negative: negativeWords.filter(word => lowerText.includes(word))
+  };
+}
+
+/**
+ * Analyzes the sentiment of input text using the sentiment library with fallback
  * @param text - The input text to analyze
  * @returns SentimentResult with score, comparative, and token analysis
  */
-export function analyzeSentiment(text: string): SentimentResult {
+export async function analyzeSentiment(text: string): Promise<SentimentResult> {
   if (!text || text.trim().length === 0) {
     throw new Error('Input text cannot be empty');
   }
 
   try {
-    const result = sentiment.analyze(text);
+    // Try to use the sentiment library first
+    const sentiment = await initializeSentiment();
     
-    return {
-      score: result.score,
-      comparative: result.comparative,
-      calculation: result.calculation || [],
-      tokens: result.tokens,
-      words: result.words,
-      positive: result.positive,
-      negative: result.negative
-    };
+    if (sentiment) {
+      const result = sentiment.analyze(text);
+      
+      return {
+        score: result.score,
+        comparative: result.comparative,
+        calculation: result.calculation || [],
+        tokens: result.tokens,
+        words: result.words,
+        positive: result.positive,
+        negative: result.negative
+      };
+    } else {
+      // Fallback to keyword-based analysis
+      console.warn('Using keyword-based sentiment analysis fallback');
+      return analyzeKeywordSentiment(text);
+    }
   } catch (error) {
-    console.error('Error analyzing sentiment:', error);
-    throw new Error('Failed to analyze sentiment');
+    console.error('Error analyzing sentiment, using fallback:', error);
+    // Use keyword-based fallback
+    return analyzeKeywordSentiment(text);
   }
 }
 
@@ -95,7 +166,7 @@ export function validateMoodInput(text: string): boolean {
  * @param text - The input text
  * @returns MoodClassification with fallback handling
  */
-export function analyzeMoodWithFallback(text: string): MoodClassification {
+export async function analyzeMoodWithFallback(text: string): Promise<MoodClassification> {
   try {
     // Validate input
     if (!validateMoodInput(text)) {
@@ -107,8 +178,8 @@ export function analyzeMoodWithFallback(text: string): MoodClassification {
       };
     }
 
-    // Perform sentiment analysis
-    const sentimentResult = analyzeSentiment(text);
+    // Perform sentiment analysis (now async)
+    const sentimentResult = await analyzeSentiment(text);
     
     // Classify mood
     const moodClassification = classifyMood(sentimentResult);

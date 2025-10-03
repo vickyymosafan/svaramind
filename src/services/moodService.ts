@@ -39,8 +39,8 @@ export class MoodService {
         throw new Error('Mood text must be between 3 and 500 characters');
       }
 
-      // Perform sentiment analysis with fallback
-      const moodClassification = analyzeMoodWithFallback(trimmedText);
+      // Perform sentiment analysis with fallback (now async)
+      const moodClassification = await analyzeMoodWithFallback(trimmedText);
       
       // Apply minimum confidence threshold
       if (moodClassification.confidence < minConfidence) {
@@ -60,7 +60,7 @@ export class MoodService {
 
       // Add debug information if requested
       if (includeDebugInfo) {
-        const sentimentResult = analyzeSentiment(trimmedText);
+        const sentimentResult = await analyzeSentiment(trimmedText);
         return {
           ...moodClassification,
           debugInfo: {

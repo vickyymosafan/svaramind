@@ -1,166 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MoodService } from '@/services/moodService';
 import { youtubeService } from '@/services/youtubeService';
-import { transformYouTubeResponse, handleInvalidAPIData } from '@/utils/youtubeTransform';
 import { MusicAPIRequest, MusicAPIResponse } from '@/types';
-import { 
-  handleAPIError, 
-  validateMusicAPIRequest, 
-  logError,
-  APIErrorClass,
-  ErrorType,
-  createErrorNextResponse
-} from '@/utils/errorHandler';
-import { logger, createRequestId, measureTimeAsync } from '@/utils/logger';
-import '@/lib/startup'; // Initialize environment validation on server startup
 
 /**
  * POST /api/music
- * Handles mood-based music discovery requests with comprehensive error handling and logging
+ * Handles mood-based music discovery requests
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const requestId = createRequestId();
-  const startTime = Date.now();
-  
-  // Log request start
-  logger.logRequestStart('POST', '/api/music', requestId, {
-    userAgent: request.headers.get('user-agent'),
-    contentType: request.headers.get('content-type')
-  });
-  
   try {
-    // Parse request body with error handling and timing
-    const { result: body, time: parseTime } = await measureTimeAsync(async () => {
-      return await parseRequestBody(request);
-    });
+    // Parse request body
+    const body = await request.json();
     
-    logger.debug('Request parsing', 'Request body parsed successfully', {
-      requestId,
-      parseTime: `${parseTime}ms`,
-      bodySize: JSON.stringify(body).length
-    });
-    
-    // Validate request with comprehensive validation
-    const validationError = validateMusicAPIRequest(body);
-    if (validationError) {
-      logger.error('Request validation', 'Validation failed', validationError, {
-        requestId,
-        inputMood: body?.mood?.substring(0, 50) + '...' // Log first 50 chars only
-      });
-      
-      const processingTime = Date.now() - startTime;
-      logger.logRequestError('POST', '/api/music', requestId, validationError, 400, processingTime);
-      
-      return createErrorNextResponse(validationError.type, validationError.message);
+    // Basic validation
+    if (!body || !body.mood || typeof body.mood !== 'string') {
+      return NextResponse.json({
+        success: false,
+        error: 'Mood field is required and must be a string'
+      }, { status: 400 });
     }
 
-    const { mood, language = 'en' } = body;
-
-    // Perform mood analysis with error handling and timing
-    const { result: moodAnalysis, time: moodAnalysisTime } = await measureTimeAsync(async () => {
-      try {
-        const analysis = await MoodService.classifyMood(mood, {
-          includeDebugInfo: false,
-          minConfidence: 0.1
-        });
-        
-        logger.logMoodAnalysis(requestId, mood, analysis, moodAnalysisTime);
-        return analysis;
-      } catch (error) {
-        logger.error('Mood analysis', 'Mood classification failed', error as Error, {
-          requestId,
-          moodLength: mood.length,
-          language
-        });
-        throw new APIErrorClass(
-          ErrorType.SERVER_ERROR,
-          'Unable to analyze your mood. Please try again.',
-          { originalError: error }
-        );
-      }
-    });
-
-    // Check if mood analysis is reliable
-    if (!MoodService.isReliableClassification(moodAnalysis)) {
-      logger.warn('Mood reliability', 'Low confidence mood classification', {
-        requestId,
-        confidence: moodAnalysis.confidence,
-        category: moodAnalysis.category
-      });
+    const mood = body.mood.trim();
+    if (mood.length < 3) {
+      return NextResponse.json({
+        success: false,
+        error: 'Mood description must be at least 3 characters long'
+      }, { status: 400 });
     }
 
-    // Fetch music based on mood with error handling and timing
-    const { result: youtubeResponse, time: youtubeAPITime } = await measureTimeAsync(async () => {
-      try {
-        const response = await youtubeService.fetchMoodBasedMusic(
-          moodAnalysis.keywords,
-          language
-        );
-        
-        logger.logYouTubeAPICall(
-          requestId,
-          moodAnalysis.keywords,
-          language,
-          response?.items?.length || 0,
-          youtubeAPITime
-        );
-        
-        return response;
-      } catch (error) {
-        logger.error('YouTube API', 'API call failed', error as Error, {
-          requestId,
-          keywords: moodAnalysis.keywords,
-          language
-        });
-        throw new APIErrorClass(
-          ErrorType.API_ERROR,
-          'Unable to fetch music data. Please try again later.',
-          { originalError: error }
-        );
-      }
+    const language = body.language || 'en';
+
+    console.log('Processing mood:', mood);
+
+    // Perform mood analysis
+    const moodAnalysis = await MoodService.classifyMood(mood, {
+      includeDebugInfo: false,
+      minConfidence: 0.1
     });
 
-    // Transform and validate YouTube data with timing
-    const { result: dataValidation, time: validationTime } = await measureTimeAsync(async () => {
-      return handleInvalidAPIData(youtubeResponse);
-    });
-    
-    logger.logDataValidation(
-      requestId,
-      dataValidation.isValid,
-      dataValidation.errors,
-      dataValidation.cleanedData.length,
-      youtubeResponse?.items?.length || 0
+    console.log('Mood analysis result:', moodAnalysis);
+
+    // Fetch music based on mood
+    const youtubeResponse = await youtubeService.fetchMoodBasedMusic(
+      moodAnalysis.keywords,
+      language
     );
-    
-    if (!dataValidation.isValid) {
-      throw new APIErrorClass(
-        ErrorType.API_ERROR,
-        'No valid music found for your mood. Please try a different description.',
-        { validationErrors: dataValidation.errors }
-      );
-    }
 
-    // Log performance metrics
-    const processingTime = Date.now() - startTime;
-    logger.logPerformanceMetrics(requestId, {
-      totalTime: processingTime,
-      moodAnalysisTime,
-      youtubeAPITime,
-      dataValidationTime: validationTime
-    });
+    console.log('YouTube response:', youtubeResponse?.items?.length || 0, 'items');
 
-    // Log successful completion
-    logger.logRequestComplete('POST', '/api/music', requestId, 200, processingTime, {
-      resultCount: dataValidation.cleanedData.length,
-      moodCategory: moodAnalysis.category,
-      confidence: moodAnalysis.confidence
-    });
+    // Transform YouTube data to our format
+    const videos = youtubeResponse.items?.map(item => ({
+      id: typeof item.id === 'string' ? item.id : item.id?.videoId || '',
+      title: item.snippet.title,
+      channelTitle: item.snippet.channelTitle,
+      thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+      publishedAt: item.snippet.publishedAt,
+      viewCount: item.statistics?.viewCount || '0',
+      likeCount: item.statistics?.likeCount || '0'
+    })) || [];
 
     // Create successful response
     const response: MusicAPIResponse = {
       success: true,
-      data: dataValidation.cleanedData,
+      data: videos,
       mood_analysis: {
         sentiment: moodAnalysis.category,
         score: Math.round(moodAnalysis.confidence * 100) / 100,
@@ -168,110 +70,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     };
 
-    return NextResponse.json(response, { 
-      status: 200,
-      headers: {
-        'X-Request-ID': requestId,
-        'X-Processing-Time': `${processingTime}ms`,
-        'X-Result-Count': dataValidation.cleanedData.length.toString()
-      }
-    });
+    return NextResponse.json(response, { status: 200 });
 
   } catch (error) {
-    // Comprehensive error handling with context
-    const processingTime = Date.now() - startTime;
+    console.error('Error in /api/music:', error);
     
-    if (error instanceof APIErrorClass) {
-      logger.logRequestError('POST', '/api/music', requestId, error, error.statusCode, processingTime);
-    } else {
-      logger.logRequestError('POST', '/api/music', requestId, error as Error, 500, processingTime);
-    }
-    
-    return handleAPIError(error, 'POST /api/music', { 
-      requestId, 
-      processingTime: `${processingTime}ms`
-    });
+    return NextResponse.json({
+      success: false,
+      error: 'Unable to analyze your mood. Please try again.'
+    }, { status: 500 });
   }
 }
 
 /**
- * Parse request body with comprehensive error handling
- */
-async function parseRequestBody(request: NextRequest): Promise<any> {
-  try {
-    const body = await request.json();
-    return body;
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new APIErrorClass(
-        ErrorType.VALIDATION_ERROR,
-        'Invalid JSON format in request body'
-      );
-    }
-    throw new APIErrorClass(
-      ErrorType.VALIDATION_ERROR,
-      'Unable to parse request body'
-    );
-  }
-}
-
-
-
-/**
- * Handle unsupported HTTP methods with proper error responses and logging
+ * Handle unsupported HTTP methods
  */
 export async function GET(): Promise<NextResponse> {
-  const requestId = createRequestId();
-  logger.warn('Unsupported method', 'GET method attempted on /api/music', {
-    requestId,
-    method: 'GET',
-    expectedMethod: 'POST'
-  });
-  
-  return createErrorNextResponse(
-    ErrorType.VALIDATION_ERROR,
-    'Method GET not allowed. Use POST to submit mood data.'
-  );
-}
-
-export async function PUT(): Promise<NextResponse> {
-  const requestId = createRequestId();
-  logger.warn('Unsupported method', 'PUT method attempted on /api/music', {
-    requestId,
-    method: 'PUT',
-    expectedMethod: 'POST'
-  });
-  
-  return createErrorNextResponse(
-    ErrorType.VALIDATION_ERROR,
-    'Method PUT not allowed. Use POST to submit mood data.'
-  );
-}
-
-export async function DELETE(): Promise<NextResponse> {
-  const requestId = createRequestId();
-  logger.warn('Unsupported method', 'DELETE method attempted on /api/music', {
-    requestId,
-    method: 'DELETE',
-    expectedMethod: 'POST'
-  });
-  
-  return createErrorNextResponse(
-    ErrorType.VALIDATION_ERROR,
-    'Method DELETE not allowed. Use POST to submit mood data.'
-  );
-}
-
-export async function PATCH(): Promise<NextResponse> {
-  const requestId = createRequestId();
-  logger.warn('Unsupported method', 'PATCH method attempted on /api/music', {
-    requestId,
-    method: 'PATCH',
-    expectedMethod: 'POST'
-  });
-  
-  return createErrorNextResponse(
-    ErrorType.VALIDATION_ERROR,
-    'Method PATCH not allowed. Use POST to submit mood data.'
-  );
+  return NextResponse.json({
+    success: false,
+    error: 'Method GET not allowed. Use POST to submit mood data.'
+  }, { status: 405 });
 }
