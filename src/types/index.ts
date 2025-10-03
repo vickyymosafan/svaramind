@@ -51,10 +51,7 @@ export interface YouTubeVideoItem {
 export interface SentimentResult {
   score: number;        // -5 to 5 range
   comparative: number;  // normalized score
-  calculation: Array<{
-    word: string;
-    score: number;
-  }>;
+  calculation: any[];   // Flexible type for sentiment library calculation
   tokens: string[];
   words: string[];
   positive: string[];
